@@ -327,6 +327,118 @@
   .meter.drain .meter-value {
     color: var(--muted);
   }
+
+  .connect-btn {
+    appearance: none;
+    background: var(--ink);
+    color: var(--bg);
+    border: 1px solid var(--ink);
+    padding: 10px 18px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .connect-btn:hover { opacity: 0.85; }
+  .connect-btn.connected {
+    background: transparent;
+    color: var(--ink);
+  }
+  .connect-btn .addr {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+
+  .vote-btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+  .vote-btn[disabled]:hover {
+    background: transparent;
+    border-color: var(--line);
+  }
+
+  .vote-gate {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    margin: -16px auto 28px;
+    max-width: 580px;
+  }
+  .vote-gate.hidden { display: none; }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 17, 17, 0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    padding: 24px;
+  }
+  .modal-backdrop.show { display: flex; }
+
+  .modal {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    max-width: 380px;
+    width: 100%;
+    padding: 32px 28px;
+  }
+  .modal h3 {
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin-bottom: 6px;
+  }
+  .modal .modal-sub {
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .wallet-list { display: flex; flex-direction: column; gap: 8px; }
+  .wallet-opt {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .wallet-opt:hover { background: var(--bg-soft); border-color: var(--ink); }
+  .wallet-opt.unavailable {
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .wallet-opt .pill {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 20px;
+    padding: 4px 0;
+    font-family: inherit;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .modal-close:hover { color: var(--ink); }
 </style>
 </head>
 <body>
@@ -338,7 +450,7 @@
   </div>
   <nav>
     <a href="#how">How it works</a>
-    <a href="#vote">Vote</a>
+    <button class="connect-btn" id="connectBtn">Connect wallet</button>
   </nav>
 </header>
 
@@ -371,15 +483,17 @@
   </div>
 
   <div class="vote" id="vote">
-    <button class="vote-btn claim" data-vote="claim">
+    <button class="vote-btn claim" data-vote="claim" disabled>
       <div class="label">Claim now</div>
       <div class="desc">Trigger the airdrop. The dev keeps fees for the next 5 minutes.</div>
     </button>
-    <button class="vote-btn wait" data-vote="wait">
+    <button class="vote-btn wait" data-vote="wait" disabled>
       <div class="label">Wait</div>
       <div class="desc">Let the meter climb higher before snapshotting.</div>
     </button>
   </div>
+
+  <div class="vote-gate" id="voteGate">Connect a Solana wallet to vote.</div>
 
   <div class="vote-bar">
     <div class="claim-fill" id="claimFill" style="width: 32%"></div>
@@ -439,6 +553,15 @@
 </footer>
 
 <div class="toast" id="toast"></div>
+
+<div class="modal-backdrop" id="walletModal">
+  <div class="modal">
+    <h3>Connect a wallet</h3>
+    <p class="modal-sub">You'll be asked to sign a message — no transaction, no fee.</p>
+    <div class="wallet-list" id="walletList"></div>
+    <button class="modal-close" id="modalClose">Cancel</button>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -547,24 +670,166 @@
     render();
   }, TICK_MS);
 
-  document.querySelectorAll(".vote-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
+  // ---- wallet integration ----
+  const connectBtn = document.getElementById("connectBtn");
+  const walletModal = document.getElementById("walletModal");
+  const walletList = document.getElementById("walletList");
+  const modalClose = document.getElementById("modalClose");
+  const voteGate = document.getElementById("voteGate");
+  const voteBtns = document.querySelectorAll(".vote-btn");
+
+  const WALLET_KEY = "coindao_wallet_v1";
+  const VOTES_KEY = "coindao_wallet_votes_v1";
+
+  // votes map: { pubkey: "claim" | "wait" }
+  let walletVotes = JSON.parse(localStorage.getItem(VOTES_KEY) || "{}");
+  let activePubkey = localStorage.getItem(WALLET_KEY) || null;
+  let activeProvider = null;
+
+  const WALLETS = [
+    { id: "phantom",  name: "Phantom",  detect: () => window.phantom?.solana || (window.solana?.isPhantom ? window.solana : null), install: "https://phantom.app/" },
+    { id: "solflare", name: "Solflare", detect: () => window.solflare?.isSolflare ? window.solflare : null,                       install: "https://solflare.com/" },
+    { id: "backpack", name: "Backpack", detect: () => window.backpack?.isBackpack ? window.backpack : null,                       install: "https://backpack.app/" },
+  ];
+
+  function shortAddr(s) { return s ? s.slice(0, 4) + "…" + s.slice(-4) : ""; }
+
+  function refreshConnectBtn() {
+    if (activePubkey) {
+      connectBtn.classList.add("connected");
+      connectBtn.innerHTML = '<span class="addr">' + shortAddr(activePubkey) + '</span> · disconnect';
+    } else {
+      connectBtn.classList.remove("connected");
+      connectBtn.textContent = "Connect wallet";
+    }
+    voteBtns.forEach(b => { b.disabled = !activePubkey; });
+    voteGate.classList.toggle("hidden", !!activePubkey);
+  }
+
+  function openModal() {
+    walletList.innerHTML = "";
+    WALLETS.forEach(w => {
+      const provider = w.detect();
+      if (provider) {
+        const b = document.createElement("button");
+        b.className = "wallet-opt";
+        b.innerHTML = '<span>' + w.name + '</span><span class="pill">detected</span>';
+        b.addEventListener("click", () => connect(w, provider));
+        walletList.appendChild(b);
+      } else {
+        const a = document.createElement("a");
+        a.className = "wallet-opt unavailable";
+        a.href = w.install;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.innerHTML = '<span>' + w.name + '</span><span class="pill">install ↗</span>';
+        walletList.appendChild(a);
+      }
+    });
+    walletModal.classList.add("show");
+  }
+
+  function closeModal() { walletModal.classList.remove("show"); }
+
+  async function connect(walletDef, provider) {
+    try {
+      const resp = await provider.connect();
+      const pk = (resp.publicKey || provider.publicKey).toString();
+      activePubkey = pk;
+      activeProvider = provider;
+      localStorage.setItem(WALLET_KEY, pk);
+      localStorage.setItem("coindao_wallet_id", walletDef.id);
+      closeModal();
+      refreshConnectBtn();
+      showToast("Connected " + shortAddr(pk));
+    } catch (e) {
+      showToast("Connection cancelled");
+    }
+  }
+
+  async function disconnect() {
+    try { await activeProvider?.disconnect?.(); } catch (e) {}
+    activePubkey = null;
+    activeProvider = null;
+    localStorage.removeItem(WALLET_KEY);
+    localStorage.removeItem("coindao_wallet_id");
+    refreshConnectBtn();
+    showToast("Disconnected");
+  }
+
+  // try to silently restore a session if Phantom/etc has trusted this site
+  (async function tryReconnect() {
+    const savedId = localStorage.getItem("coindao_wallet_id");
+    if (!savedId || !activePubkey) return;
+    const def = WALLETS.find(w => w.id === savedId);
+    const provider = def?.detect();
+    if (!provider) return;
+    try {
+      const resp = await provider.connect({ onlyIfTrusted: true });
+      const pk = (resp.publicKey || provider.publicKey).toString();
+      activePubkey = pk;
+      activeProvider = provider;
+      refreshConnectBtn();
+    } catch (e) {
+      // user hasn't trusted; require explicit click
+      activePubkey = null;
+      refreshConnectBtn();
+    }
+  })();
+
+  connectBtn.addEventListener("click", () => {
+    if (activePubkey) disconnect(); else openModal();
+  });
+  modalClose.addEventListener("click", closeModal);
+  walletModal.addEventListener("click", (e) => { if (e.target === walletModal) closeModal(); });
+
+  async function signVote(choice) {
+    if (!activeProvider?.signMessage) {
+      showToast("This wallet can't sign messages");
+      return false;
+    }
+    const msg = "coindao vote\n\nchoice: " + choice + "\nwallet: " + activePubkey + "\nts: " + Date.now();
+    try {
+      const encoded = new TextEncoder().encode(msg);
+      await activeProvider.signMessage(encoded, "utf8");
+      return true;
+    } catch (e) {
+      showToast("Signature rejected");
+      return false;
+    }
+  }
+
+  voteBtns.forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!activePubkey) { openModal(); return; }
       const choice = btn.dataset.vote;
-      state.votes[choice] = (state.votes[choice] || 0) + 1;
+      const ok = await signVote(choice);
+      if (!ok) return;
+
+      // one vote per wallet — recompute tallies from the map
+      walletVotes[activePubkey] = choice;
+      localStorage.setItem(VOTES_KEY, JSON.stringify(walletVotes));
+
+      let claim = 0, wait = 0;
+      Object.values(walletVotes).forEach(v => { if (v === "claim") claim++; else if (v === "wait") wait++; });
+      // baseline so the bar isn't empty on first vote
+      state.votes = { claim: 32 + claim, wait: 68 + wait };
+
       if (choice === "claim") {
         const claimed = state.amount;
         state.lastClaim = Date.now();
         state.devClaimUntil = Date.now() + 5 * 60 * 1000;
         state.amount = 0;
-        showToast("Airdropped " + fmt(claimed) + " SOL · dev claims for 5m");
+        showToast("Vote signed · airdropped " + fmt(claimed) + " SOL");
       } else {
-        showToast("Vote recorded: wait");
+        showToast("Vote signed: wait");
       }
       saveState(state);
       render();
     });
   });
 
+  refreshConnectBtn();
   render();
 })();
 </script>
