@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>coindao</title>
+<style>
+  :root {
+    --bg: #07080c;
+    --panel: rgba(18, 20, 28, 0.72);
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #e8ebf2;
+    --muted: #8b93a7;
+    --accent: #7c5cff;
+    --accent-2: #29e6a4;
+    --danger: #ff5c7a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100%;
+  }
+
+  body {
+    background:
+      radial-gradient(1000px 600px at 80% -10%, rgba(124, 92, 255, 0.18), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(41, 230, 164, 0.12), transparent 60%),
+      var(--bg);
+    overflow-x: hidden;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 32px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(7, 8, 12, 0.55);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .logo {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: conic-gradient(from 120deg, var(--accent), var(--accent-2), var(--accent));
+    box-shadow: 0 0 24px rgba(124, 92, 255, 0.45);
+  }
+
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    margin-left: 22px;
+    font-size: 14px;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--text); }
+
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 64px 24px 120px;
+    text-align: center;
+  }
+
+  .tagline {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    font-size: 12px;
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-size: clamp(38px, 6vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    font-weight: 800;
+    margin-bottom: 14px;
+  }
+  h1 span {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .sub {
+    color: var(--muted);
+    max-width: 560px;
+    margin: 0 auto 56px;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .meter {
+    position: relative;
+    margin: 0 auto 44px;
+    padding: 56px 32px;
+    border-radius: 28px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+    box-shadow:
+      0 30px 80px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+  }
+
+  .meter::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, rgba(124, 92, 255, 0.4), transparent 40%, rgba(41, 230, 164, 0.3));
+    z-index: -1;
+    border-radius: 30px;
+    filter: blur(28px);
+    opacity: 0.6;
+  }
+
+  .meter-label {
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+
+  .meter-value {
+    font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-weight: 700;
+    font-size: clamp(56px, 11vw, 120px);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    background: linear-gradient(180deg, #ffffff, #b8b3ff 70%, #7c5cff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 50px rgba(124, 92, 255, 0.2);
+  }
+
+  .meter-currency {
+    font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 0.42em;
+    color: var(--muted);
+    margin-left: 8px;
+    vertical-align: super;
+  }
+
+  .meter-stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    text-align: left;
+    min-width: 130px;
+  }
+  .stat-label {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font-family: "SF Mono", monospace;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .pulse {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-2);
+    margin-right: 8px;
+    box-shadow: 0 0 0 0 rgba(41, 230, 164, 0.7);
+    animation: pulse 1.6s infinite;
+    vertical-align: middle;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(41, 230, 164, 0.7); }
+    70% { box-shadow: 0 0 0 12px rgba(41, 230, 164, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(41, 230, 164, 0); }
+  }
+
+  .vote {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    max-width: 620px;
+    margin: 0 auto 28px;
+  }
+  @media (max-width: 540px) { .vote { grid-template-columns: 1fr; } }
+
+  .vote-btn {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text);
+    padding: 22px 20px;
+    border-radius: 18px;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.15s, border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .vote-btn:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .vote-btn .label {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .vote-btn .desc {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .vote-btn.claim .label::before {
+    content: "";
+    width: 8px; height: 8px;
+    background: var(--danger);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--danger);
+  }
+  .vote-btn.wait .label::before {
+    content: "";
+    width: 8px; height: 8px;
+    background: var(--accent-2);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--accent-2);
+  }
+
+  .vote-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 999px;
+    overflow: hidden;
+    max-width: 620px;
+    margin: 0 auto 64px;
+    display: flex;
+  }
+  .vote-bar .claim-fill { background: var(--danger); height: 100%; transition: width 0.3s; }
+  .vote-bar .wait-fill { background: var(--accent-2); height: 100%; transition: width 0.3s; }
+
+  .vote-tally {
+    display: flex;
+    justify-content: space-between;
+    max-width: 620px;
+    margin: -56px auto 64px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: "SF Mono", monospace;
+  }
+
+  section.explainer {
+    margin-top: 80px;
+    text-align: left;
+    padding: 40px;
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+  }
+
+  section.explainer h2 {
+    font-size: 28px;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+  section.explainer .lede {
+    color: var(--muted);
+    margin-bottom: 32px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .steps {
+    display: grid;
+    gap: 20px;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 18px;
+    padding: 18px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+  }
+  .step .num {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #07080c;
+    font-weight: 800;
+    font-size: 14px;
+  }
+  .step h3 { font-size: 15px; margin-bottom: 4px; }
+  .step p { color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+  .warn {
+    margin-top: 28px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 92, 122, 0.25);
+    background: rgba(255, 92, 122, 0.06);
+    color: #ffb1bf;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .warn strong { color: var(--danger); }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 32px;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--muted); }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(20, 22, 30, 0.95);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    z-index: 20;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .drain {
+    background: rgba(255, 92, 122, 0.08) !important;
+    border-color: rgba(255, 92, 122, 0.3) !important;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo"></div>
+    coindao
+  </div>
+  <nav>
+    <a href="#how">How it works</a>
+    <a href="#vote">Vote</a>
+  </nav>
+</header>
+
+<main>
+  <div class="tagline">inspired by toly's insurancedao</div>
+  <h1>The fees just keep <span>stacking.</span></h1>
+  <p class="sub">
+    Every coindao holder collectively decides when to claim. Vote to airdrop now — or wait, and let the meter climb.
+  </p>
+
+  <div class="meter" id="meter">
+    <div class="meter-label"><span class="pulse"></span> Unclaimed fees</div>
+    <div>
+      <span class="meter-value" id="meterValue">0.00</span><span class="meter-currency">SOL</span>
+    </div>
+    <div class="meter-stats">
+      <div class="stat">
+        <div class="stat-label">Rate</div>
+        <div class="stat-value" id="rate">+0.0420 / s</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Holders</div>
+        <div class="stat-value" id="holders">1,287</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Last claim</div>
+        <div class="stat-value" id="lastClaim">never</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vote" id="vote">
+    <button class="vote-btn claim" data-vote="claim">
+      <div class="label">Claim now</div>
+      <div class="desc">Trigger the airdrop. The dev keeps fees for the next 5 minutes.</div>
+    </button>
+    <button class="vote-btn wait" data-vote="wait">
+      <div class="label">Wait</div>
+      <div class="desc">Let the meter climb higher before snapshotting.</div>
+    </button>
+  </div>
+
+  <div class="vote-bar">
+    <div class="claim-fill" id="claimFill" style="width: 32%"></div>
+    <div class="wait-fill" id="waitFill" style="width: 68%"></div>
+  </div>
+  <div class="vote-tally">
+    <span>Claim now: <strong id="claimPct">32%</strong></span>
+    <span>Wait: <strong id="waitPct">68%</strong></span>
+  </div>
+
+  <section class="explainer" id="how">
+    <h2>How coindao works</h2>
+    <p class="lede">
+      coindao is a holder-governed fee vault. Every swap on the token contributes to a single pool.
+      The pool only releases when holders vote to claim.
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <div>
+          <h3>Fees accumulate</h3>
+          <p>The meter goes up in real time as the token is traded. Nothing leaves the vault until the DAO says so.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div>
+          <h3>Holders vote</h3>
+          <p>At any moment, holders can choose: claim now and airdrop the entire pool to every holder, or wait and let the number climb.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div>
+          <h3>If "claim" wins, the airdrop fires</h3>
+          <p>The full unclaimed balance is snapshotted and distributed pro-rata to every wallet holding coindao at that block.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <div>
+          <h3>Then the dev claims for 5 minutes</h3>
+          <p>After a holder-triggered claim, all fees generated for the next 5 minutes route to the dev wallet — the cost of pulling the trigger early.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="warn">
+      <strong>The game theory:</strong> claim too early, you fund the dev. Wait too long, someone else might claim before you.
+      The pool is only as patient as its weakest hand.
+    </div>
+  </section>
+</main>
+
+<footer>
+  coindao &middot; concept inspired by <a href="https://x.com/aeyakovenko" target="_blank" rel="noopener">toly's insurancedao</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const STORAGE_KEY = "coindao_state_v1";
+  const RATE_PER_SEC = 0.0420; // SOL per second, deterministic feel
+  const TICK_MS = 50;
+
+  const meterEl = document.getElementById("meterValue");
+  const rateEl = document.getElementById("rate");
+  const lastClaimEl = document.getElementById("lastClaim");
+  const claimFill = document.getElementById("claimFill");
+  const waitFill = document.getElementById("waitFill");
+  const claimPct = document.getElementById("claimPct");
+  const waitPct = document.getElementById("waitPct");
+  const toast = document.getElementById("toast");
+  const meterCard = document.getElementById("meter");
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+
+  function saveState(s) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+  }
+
+  let state = loadState() || {
+    amount: 0,
+    lastTick: Date.now(),
+    lastClaim: null,
+    devClaimUntil: null,
+    votes: { claim: 32, wait: 68 }
+  };
+
+  // catch up offline accrual since last visit
+  (function catchUp() {
+    const now = Date.now();
+    const elapsed = (now - state.lastTick) / 1000;
+    if (elapsed > 0 && elapsed < 60 * 60 * 24 * 7) {
+      // skip dev-claim window seconds
+      let creditSec = elapsed;
+      if (state.devClaimUntil && state.devClaimUntil > state.lastTick) {
+        const overlapEnd = Math.min(state.devClaimUntil, now);
+        const overlapStart = Math.max(state.lastTick, state.lastTick);
+        const overlap = Math.max(0, (overlapEnd - overlapStart) / 1000);
+        creditSec = Math.max(0, elapsed - overlap);
+      }
+      state.amount += creditSec * RATE_PER_SEC;
+    }
+    state.lastTick = now;
+    saveState(state);
+  })();
+
+  function fmt(n) {
+    return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  function fmtTimeAgo(ts) {
+    if (!ts) return "never";
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return s + "s ago";
+    if (s < 3600) return Math.floor(s / 60) + "m ago";
+    if (s < 86400) return Math.floor(s / 3600) + "h ago";
+    return Math.floor(s / 86400) + "d ago";
+  }
+
+  function render() {
+    meterEl.textContent = fmt(state.amount);
+    const inDevWindow = state.devClaimUntil && Date.now() < state.devClaimUntil;
+    if (inDevWindow) {
+      const remaining = Math.ceil((state.devClaimUntil - Date.now()) / 1000);
+      rateEl.textContent = "dev claim · " + remaining + "s";
+      meterCard.classList.add("drain");
+    } else {
+      rateEl.textContent = "+" + RATE_PER_SEC.toFixed(4) + " / s";
+      meterCard.classList.remove("drain");
+    }
+    lastClaimEl.textContent = fmtTimeAgo(state.lastClaim);
+
+    const total = state.votes.claim + state.votes.wait || 1;
+    const cp = Math.round((state.votes.claim / total) * 100);
+    const wp = 100 - cp;
+    claimFill.style.width = cp + "%";
+    waitFill.style.width = wp + "%";
+    claimPct.textContent = cp + "%";
+    waitPct.textContent = wp + "%";
+  }
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove("show"), 2400);
+  }
+
+  // tick loop
+  setInterval(() => {
+    const now = Date.now();
+    const dt = (now - state.lastTick) / 1000;
+    state.lastTick = now;
+    const inDevWindow = state.devClaimUntil && now < state.devClaimUntil;
+    if (!inDevWindow) {
+      state.amount += dt * RATE_PER_SEC;
+    }
+    saveState(state);
+    render();
+  }, TICK_MS);
+
+  // voting
+  document.querySelectorAll(".vote-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const choice = btn.dataset.vote;
+      state.votes[choice] = (state.votes[choice] || 0) + 1;
+      if (choice === "claim") {
+        // simulate the claim event
+        const claimed = state.amount;
+        state.lastClaim = Date.now();
+        state.devClaimUntil = Date.now() + 5 * 60 * 1000;
+        state.amount = 0;
+        showToast("Airdropped " + fmt(claimed) + " SOL · dev claims for 5m");
+      } else {
+        showToast("Vote recorded: wait");
+      }
+      saveState(state);
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>
